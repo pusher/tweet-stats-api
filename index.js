@@ -18,22 +18,29 @@ try {
     twitter_consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
     twitter_access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
     twitter_access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
-    keywords: (process.env.KEYWORDS) ? process.env.KEYWORDS.split(",").trim() : []
+    keywords: (process.env.KEYWORDS) ? process.env.KEYWORDS.split(",").trim() : [],
+    sentry_dsl: process.env.SENTRY_DSL
   }
 }
+
+var raven = require("raven");
+var ravenClient = new raven.Client(config.sentry_dsl);
 
 var silent = true;
 
 var keywords = config.keywords;
 var keywordStats = {};
 
-// Capture uncaught errors
-process.on("uncaughtException", function(err) {
-  console.log(err);
 
+// --------------------------------------------------------------------
+// SENTRY
+// --------------------------------------------------------------------
+
+ravenClient.patchGlobal(function(sentryStatus, err) {
   if (!silent) console.log("Attempting to restart stream");
   restartStream();
 });
+
 
 // --------------------------------------------------------------------
 // SET UP PUSHER
@@ -63,7 +70,7 @@ app.get("/ping", function(req, res) {
   res.status(200).end();
 });
 
-// TODO: Provide endpoint for accessing list of active keywords
+// Endpoint for accessing list of active keywords
 app.get("/keywords.json", function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -134,18 +141,15 @@ app.get("/stats/:keyword/24hours-geckoboard.json", function(req, res, next) {
   res.json(output);
 });
 
+// Sentry
+app.use(raven.middleware.express(ravenClient));
+
 // Simple logger
 app.use(function(req, res, next){
   if (!silent) console.log("%s %s", req.method, req.url);
   if (!silent) console.log(req.body);
   next();
 });
-
-// Error handler
-app.use(errorHandler({
-  dumpExceptions: true,
-  showStack: true
-}));
 
 // Open server on specified port
 if (!silent) console.log("Starting Express server");
