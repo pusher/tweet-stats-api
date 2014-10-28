@@ -22,6 +22,7 @@
     "errorhandler": "~1.2.2",
     "pusher": "~1.0.1",
     "request": "~2.45.0",
-    "raven": "~0.7.2"
+    "raven": "~0.7.2",
+    "newrelic": "~1.12.2"
   }
 }

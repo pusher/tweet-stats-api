@@ -1,3 +1,5 @@
+require("newrelic");
+
 var _ = require("underscore");
 var twitter = require("twitter");
 
