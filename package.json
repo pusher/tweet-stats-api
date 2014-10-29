@@ -15,14 +15,15 @@
   "author": "Robin Hawkes <rob@rawkes.com>",
   "license": "MIT",
   "dependencies": {
-    "twitter": "~0.2.12",
-    "underscore": "~1.7.0",
-    "express": "~4.9.8",
     "body-parser": "~1.9.0",
     "errorhandler": "~1.2.2",
+    "express": "~4.9.8",
+    "newrelic": "~1.12.2",
+    "nodetime": "^0.8.15",
     "pusher": "~1.0.1",
-    "request": "~2.45.0",
     "raven": "~0.7.2",
-    "newrelic": "~1.12.2"
+    "request": "~2.45.0",
+    "twitter": "~0.2.12",
+    "underscore": "~1.7.0"
   }
 }
