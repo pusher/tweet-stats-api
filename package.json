@@ -1,6 +1,6 @@
 {
   "name": "tweet-stats-api",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Realtime statistics on Twitter keywords",
   "main": "index.js",
   "scripts": {
