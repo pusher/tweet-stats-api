@@ -1,8 +1,3 @@
-require("nodetime").profile({
-  accountKey: "9daea4574924463f1758a8cd585c74d424c7656e", 
-  appName: "Tweet Stats API"
-});
-
 require("newrelic");
 
 // var heapdump = require("heapdump");

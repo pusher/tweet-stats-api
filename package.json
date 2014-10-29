@@ -19,7 +19,6 @@
     "errorhandler": "~1.2.2",
     "express": "~4.9.8",
     "newrelic": "~1.12.2",
-    "nodetime": "^0.8.15",
     "pusher": "~1.0.1",
     "raven": "~0.7.2",
     "request": "~2.45.0",
