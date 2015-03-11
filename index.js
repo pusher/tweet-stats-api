@@ -19,20 +19,27 @@ try {
     twitter_access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
     twitter_access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
     keywords: (process.env.KEYWORDS) ? process.env.KEYWORDS.split(",") : [],
-    update_frequency: process.env.UPDATE_FREQUENCY_SECONDS || 5
+    update_frequency: process.env.UPDATE_FREQUENCY_SECONDS || 5,
+    debug: (process.env.DEBUG === undefined? false : true)
   }
 }
 
-var silent = true;
+console.log('Starting with config', config);
+
+var log = function() {
+  if(config.debug) {
+    console.log.apply(console, arguments);
+  }
+};
 
 var keywords = config.keywords;
 var keywordStats = {};
 
 // Capture uncaught errors
 process.on("uncaughtException", function(err) {
-  console.log(err);
+  log(err);
 
-  if (!silent) console.log("Attempting to restart stream");
+  log("Attempting to restart stream");
   setImmediate(restartStream);
 });
 
@@ -137,8 +144,8 @@ app.get("/stats/:keyword/24hours-geckoboard.json", function(req, res, next) {
 
 // Simple logger
 app.use(function(req, res, next){
-  if (!silent) console.log("%s %s", req.method, req.url);
-  if (!silent) console.log(req.body);
+  log("%s %s", req.method, req.url);
+  log(req.body);
   next();
 });
 
@@ -149,8 +156,10 @@ app.use(errorHandler({
 }));
 
 // Open server on specified port
-if (!silent) console.log("Starting Express server");
-app.listen(process.env.PORT || 5001);
+var port = process.env.PORT || 5001;
+app.listen(port, function() {
+  console.log("Starting Express server on port %d", port);
+});
 
 
 // --------------------------------------------------------------------
@@ -180,7 +189,7 @@ var updateStats = function() {
   var currentTime = new Date();
   var millisSinceLastUpdate = (currentTime - statsTime);
   
-  if(!silent) console.log('millisSinceLastUpdate', millisSinceLastUpdate);
+  log('millisSinceLastUpdate', millisSinceLastUpdate);
   
   if (millisSinceLastUpdate < updateFrequencyMillis) {
     // Wait until the update frequency millis has passed
@@ -207,7 +216,7 @@ var updateStats = function() {
 
     // Crop array to last 24 hours
     if (keywordStats[keyword].past24.data.length > 1440) {
-      if (!silent) console.log("Cropping stats array for past 24 hours");
+      log("Cropping stats array for past 24 hours");
 
       // Crop
       var removed = keywordStats[keyword].past24.data.splice(1439);
@@ -219,8 +228,8 @@ var updateStats = function() {
     }
   });
 
-  if (!silent) console.log("Sending previous minute via Pusher");
-  if (!silent) console.log(statsPayload);
+  log("Sending previous minute via Pusher");
+  log(statsPayload);
 
   // Send stats update via Pusher
   pusher.trigger("stats", "update", statsPayload);
@@ -254,7 +263,7 @@ var streamRetryDelay = 1000;
 var startStream = function() {
   var tracking = keywords.join(",");
 
-  if(!silent) console.log('tracking', tracking);
+  log('tracking', tracking);
 
   twit.stream("filter", {
     track: tracking
@@ -286,10 +295,10 @@ var startStream = function() {
 var restartingStream = false;
 var restartStream = function() {
   if (restartingStream) {
-    if (!silent) console.log("Aborting stream retry as it is already being restarted");
+    log("Aborting stream retry as it is already being restarted");
   }
 
-  if (!silent) console.log("Aborting previous stream");
+  log("Aborting previous stream");
   if (twitterStream) {
     twitterStream.destroy();
   }
@@ -298,7 +307,7 @@ var restartStream = function() {
   restartingStream = true;
 
   if (streamRetryCount >= streamRetryLimit) {
-    if (!silent) console.log("Aborting stream retry after too many attempts");
+    log("Aborting stream retry after too many attempts");
     return;
   }
 
@@ -312,7 +321,7 @@ var processTweet = function(tweet) {
   // Look for keywords within text
   _.each(keywords, function(keyword) {
     if (tweet.text && tweet.text.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-      if (!silent) console.log("A tweet about " + keyword);
+      // log("A tweet about " + keyword);
 
       // Update stats
       keywordStats[keyword].past24.data[0].value += 1;
