@@ -19,6 +19,7 @@ try {
     twitter_access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
     twitter_access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
     keywords: (process.env.KEYWORDS) ? process.env.KEYWORDS.split(",") : [],
+    update_frequency: process.env.UPDATE_FREQUENCY_SECONDS || 5
   }
 }
 
@@ -175,9 +176,14 @@ _.each(keywords, function(keyword) {
 });
 
 var updateStats = function() {
+  var updateFrequencyMillis = (config.update_frequency * 1000);
   var currentTime = new Date();
+  var millisSinceLastUpdate = (currentTime - statsTime);
   
-  if (statsTime.getMinutes() == currentTime.getMinutes()) {
+  if(!silent) console.log('millisSinceLastUpdate', millisSinceLastUpdate);
+  
+  if (millisSinceLastUpdate < updateFrequencyMillis) {
+    // Wait until the update frequency millis has passed
     setTimeout(function() {
       updateStats();
     }, 1000);
@@ -246,8 +252,12 @@ var streamRetryLimit = 10;
 var streamRetryDelay = 1000;
 
 var startStream = function() {
+  var tracking = keywords.join(",");
+
+  if(!silent) console.log('tracking', tracking);
+
   twit.stream("filter", {
-    track: keywords.join(",")
+    track: tracking
   }, function(stream) {
     twitterStream = stream;
 
@@ -255,7 +265,7 @@ var startStream = function() {
       if (streamRetryCount > 0) {
         streamRetryCount = 0;
       }
-
+      
       processTweet(data);
     });
 
@@ -301,7 +311,7 @@ var restartStream = function() {
 var processTweet = function(tweet) {
   // Look for keywords within text
   _.each(keywords, function(keyword) {
-    if (tweet.text.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
+    if (tweet.text && tweet.text.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
       if (!silent) console.log("A tweet about " + keyword);
 
       // Update stats
