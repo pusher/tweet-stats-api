@@ -33,15 +33,23 @@ var log = function() {
 };
 
 var keywords = config.keywords;
+
+// Using a constructor for memory profiling
+var KeywordStats = function() {
+  var self = this;
+  self.past24 = {
+    total: 0,
+    // Per-minute, with anything after 24-hours removed
+    data: [{
+      value: 0,
+      time: statsTime.getTime()
+    }]
+  }
+};
+
+// LEAK: Could it be this?
 var keywordStats = {};
 
-// Capture uncaught errors
-process.on("uncaughtException", function(err) {
-  log(err);
-
-  log("Attempting to restart stream");
-  setImmediate(restartStream);
-});
 
 // --------------------------------------------------------------------
 // SET UP PUSHER
@@ -71,7 +79,7 @@ app.get("/ping", function(req, res) {
   res.status(200).end();
 });
 
-// TODO: Provide endpoint for accessing list of active keywords
+// Endpoint for accessing list of active keywords
 app.get("/keywords.json", function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -86,6 +94,7 @@ app.get("/stats/:keyword/24hours.json", function(req, res, next) {
     return;
   }
 
+  // LEAK: Could it be this?
   var statsCopy = JSON.parse(JSON.stringify(keywordStats[req.params.keyword].past24.data)).reverse();
 
   // Pop the current minute off
@@ -103,6 +112,10 @@ app.get("/stats/:keyword/24hours.json", function(req, res, next) {
   res.header("Access-Control-Allow-Headers", "Content-Type");
 
   res.json(output);
+
+  statsCopy = undefined;
+  removedStat = undefined;
+  output = undefined;
 });
 
 // Get stats for past 24 hours - Geckoboard formatting
@@ -112,6 +125,7 @@ app.get("/stats/:keyword/24hours-geckoboard.json", function(req, res, next) {
     return;
   }
 
+  // LEAK: Could it be this?
   var statsCopy = JSON.parse(JSON.stringify(keywordStats[req.params.keyword].past24.data)).reverse();
 
   // Pop the current minute off
@@ -140,6 +154,10 @@ app.get("/stats/:keyword/24hours-geckoboard.json", function(req, res, next) {
   res.header("Access-Control-Allow-Headers", "Content-Type");
 
   res.json(output);
+
+  statsCopy = undefined;
+  removedStat = undefined;
+  output = undefined;
 });
 
 // Simple logger
@@ -148,12 +166,6 @@ app.use(function(req, res, next){
   log(req.body);
   next();
 });
-
-// Error handler
-app.use(errorHandler({
-  dumpExceptions: true,
-  showStack: true
-}));
 
 // Open server on specified port
 var port = process.env.PORT || 5001;
@@ -171,16 +183,7 @@ var statsTime = new Date();
 // Populate initial statistics for each keyword
 _.each(keywords, function(keyword) {
   if (!keywordStats[keyword]) {
-    keywordStats[keyword] = {
-      past24: {
-        total: 0,
-        // Per-minute, with anything after 24-hours removed
-        data: [{
-          value: 0,
-          time: statsTime.getTime()
-        }]
-      }
-    }
+    keywordStats[keyword] = new KeywordStats();
   }
 });
 
@@ -193,13 +196,14 @@ var updateStats = function() {
   
   if (millisSinceLastUpdate < updateFrequencyMillis) {
     // Wait until the update frequency millis has passed
-    setTimeout(function() {
+    setTimeout(function updateStatsClosure() {
       updateStats();
     }, 1000);
 
     return;
   }
 
+  // LEAK: Could it be this?
   var statsPayload = {};
 
   _.each(keywords, function(keyword) {
@@ -234,7 +238,11 @@ var updateStats = function() {
   // Send stats update via Pusher
   pusher.trigger("stats", "update", statsPayload);
 
+  statsPayload = undefined;
+
   statsTime = currentTime;
+
+  // heapdump.writeSnapshot("/Users/Rob/Desktop/" + Date.now() + ".heapsnapshot");
 
   setTimeout(function() {
     updateStats();
@@ -270,7 +278,7 @@ var startStream = function() {
   }, function(stream) {
     twitterStream = stream;
 
-    twitterStream.on("data", function(data) {
+    twitterStream.on("data", function onTweetClosure(data) {
       if (streamRetryCount > 0) {
         streamRetryCount = 0;
       }
@@ -301,6 +309,7 @@ var restartStream = function() {
   log("Aborting previous stream");
   if (twitterStream) {
     twitterStream.destroy();
+    twitterStream = undefined;
   }
 
   streamRetryCount += 1;
@@ -311,7 +320,7 @@ var restartStream = function() {
     return;
   }
 
-  setTimeout(function() {
+  setTimeout(function restartStreamClosure() {
     restartingStream = false;
     startStream();
   }, streamRetryDelay * (streamRetryCount * 2));
