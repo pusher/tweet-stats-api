@@ -90,19 +90,20 @@ app.get("/keywords.json", function(req, res, next) {
 
 // Get stats for past 24 hours
 app.get("/stats/:keyword/24hours.json", function(req, res, next) {
-  if (!keywordStats[req.params.keyword]) {
+  var keyword = decodeURIComponent(req.params.keyword);
+  if (!keywordStats[keyword]) {
     res.status(404).end();
     return;
   }
 
   // LEAK: Could it be this?
-  var statsCopy = JSON.parse(JSON.stringify(keywordStats[req.params.keyword].past24.data)).reverse();
+  var statsCopy = JSON.parse(JSON.stringify(keywordStats[keyword].past24.data)).reverse();
 
   // Pop the current minute off
   var removedStat = statsCopy.pop();
 
   // Reduce total to account for removed stat
-  var newTotal = keywordStats[req.params.keyword].past24.total - removedStat.value;
+  var newTotal = keywordStats[keyword].past24.total - removedStat.value;
 
   var output = {
     total: newTotal,
