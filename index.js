@@ -44,7 +44,8 @@ var KeywordStats = function() {
       value: 0,
       time: statsTime.getTime()
     }]
-  }
+  };
+  self.allTimeTotal = 0;
 };
 
 // LEAK: Could it be this?
@@ -209,7 +210,9 @@ var updateStats = function() {
   _.each(keywords, function(keyword) {
     statsPayload[keyword] = {
       time: statsTime.getTime(),
-      value: keywordStats[keyword].past24.data[0].value
+      value: keywordStats[keyword].past24.data[0].value,
+      past24Total: keywordStats[keyword].past24.total,
+      allTimeTotal: keywordStats[keyword].allTimeTotal
     };
 
     // Add new minute with a count of 0
@@ -335,6 +338,7 @@ var processTweet = function(tweet) {
       // Update stats
       keywordStats[keyword].past24.data[0].value += 1;
       keywordStats[keyword].past24.total += 1;
+      keywordStats[keyword].allTimeTotal += 1;
     }
   });
 };
