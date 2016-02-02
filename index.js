@@ -331,17 +331,24 @@ var restartStream = function() {
 };
 
 var processTweet = function(tweet) {
-  // Look for keywords within text
-  _.each(keywords, function(keyword) {
-    if (tweet.text && tweet.text.toLowerCase().indexOf(keyword.toLowerCase()) > -1) {
-      // log("A tweet about " + keyword);
 
-      // Update stats
+  _.chain(keywords)
+
+    // Look for keywords within text
+    .filter(function(keyword) {
+      // A keyword may have serveral terms which should all match
+      return _.every(keyword.split(' '), function(term) {
+        return tweet.text && tweet.text.toLowerCase().indexOf(term.toLowerCase()) > -1
+      })
+    })
+
+    // Update stats
+    .each(function(keyword) {
       keywordStats[keyword].past24.data[0].value += 1;
       keywordStats[keyword].past24.total += 1;
       keywordStats[keyword].allTimeTotal += 1;
-    }
-  });
+    })
+
 };
 
 // Start stream after short timeout to avoid triggering multi-connection errors
